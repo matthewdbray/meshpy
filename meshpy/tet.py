@@ -109,6 +109,72 @@ class MeshInfo(internals.MeshInfo, MeshInfoBase):
             "Mesh")
         vtkelements.tofile(filename)
 
+    def write_3dm(self, filename):
+        import sys
+        outfile = open(filename,'wb')
+        outfile.write("MESH3D\n")
+        #Sanity check
+        try: 
+            assert(len(self.element_attributes) > 1)
+        except:
+            print "You don't have any regions, something has went terribly wrong\n"
+            sys.exit()
+
+        for i,e in enumerate(self.elements):
+            line = "E4T \t %8d %8d %8d %8d %8d %8d\n" % (i+1,e[0]+1,e[1]+1,e[2]+1,e[3]+1,self.element_attributes[i])
+            outfile.write(line)
+
+        for i,p in enumerate(self.points):
+            line = "ND \t %8d %12lf %12lf %12lf\n" % (i+1,p[0],p[1],p[2])
+            outfile.write(line)
+        outfile.write("END\n")
+
+    def write_boundary(self, filename):
+        import sys
+        outfile = open(filename,'wb')
+# Print nodes
+        for i,p in enumerate(self.points):
+            if p[2] == 0:  #TODO  think of a clever way to find nodes - this is hardcoded
+                line = "NDS %d 1\n" % (i+1)
+                outfile.write(line)
+        self.faces
+        for i,f in enumerate(self.faces):
+            if self.face_markers[i] == -1:
+                try:
+                    assert(self.adjacent_elements[i][1] == -1)
+                except: 
+                    print "I've made some error in my logic :( \n"
+                    print f, self.face_markers[i], self.adjacent_elements[i]
+                    sys.exit()
+                missing_element = self.adjacent_elements[i][0]
+                loc_ele = self.elements[missing_element]
+# List comprehension - looking for element not in faces, joining list to string, changing to int
+                not_in_faces = int(''.join([str(e) for e in loc_ele if e not in f]))
+                index = loc_ele.index(not_in_faces)
+#---------------------------------------------------------
+#  Different cases for FCS cards
+#  Case 1: Nodes are 2, 3, 4
+#  Case 2: Nodes are 1, 4, 3
+#  Case 3: Nodes are 1, 2, 4
+#  Case 4: Nodes are 1, 3, 2
+#---------------------------------------------------------
+                if index is 0:
+                    vert_not_in_tet = 1
+                elif index is 1:
+                    vert_not_in_tet = 2 
+                elif index is 2:
+                    vert_not_in_tet = 3
+                elif index is 3:
+                    vert_not_in_tet = 4 
+                else:
+                    print "There is some problem with your index\n"
+                    sys.exit()
+                line = "FCS %d %d 2\n" % ((i+1), vert_not_in_tet)
+                outfile.write(line)
+        outfile.write("END\n")
+        outfile.close()
+
+
     def set_elements(self, elements):
         self.elements.resize(len(elements))
 
