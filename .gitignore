@@ -29,3 +29,4 @@ setuptools*tar.gz
 setuptools*pth
 .sw[op]
 examples
+*.DS_Store
